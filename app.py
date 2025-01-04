@@ -3,14 +3,24 @@ from backend.pdfScrap import extract_text_from_pdf, summarize_text_with_llm
 import requests
 from bs4 import BeautifulSoup
 
-app = Flask(__name__)
+from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
+import os
 
-@app.route('/', methods=['GET','POST'])
+app = Flask(__name__)
+UPLOAD_FOLDER = './uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure the uploads folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    return render_template("index.html")
+    return render_template("pdfscrap.html")
 
 @app.route('/summarizePdf', methods=['POST'])
 def summarize_pdf():
+    """Endpoint to upload a PDF, extract text, and summarize it."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
@@ -18,14 +28,23 @@ def summarize_pdf():
     if not pdf_file.filename.endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
 
-    # Extract text from PDF
-    extracted_text = extract_text_from_pdf(pdf_file)
-    if extracted_text.startswith("Error"):
-        return jsonify({"error": extracted_text}), 500
+    # Secure the uploaded file
+    filename = secure_filename(pdf_file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    pdf_file.save(filepath)
 
-    # Summarize text using Gemini LLM API
+    # Re-open the saved file for text extraction
+    with open(filepath, 'rb') as saved_pdf_file:
+        extracted_text = extract_text_from_pdf(saved_pdf_file)
+        if extracted_text.startswith("Error"):
+            return jsonify({"error": extracted_text}), 500
+
+    # Summarize the extracted text using LLM
     summarized_text = summarize_text_with_llm(extracted_text)
+
+    # Return the summary as JSON
     return jsonify({"summary": summarized_text})
+
 
 @app.route('/scrape', methods=['POST'])
 def scrape():

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hacksprint</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .summary-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        .summary-box h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .summary-box p, .summary-box ul {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .summary-box ul {
+            padding-left: 20px;
+        }
+        .summary-box ul li {
+            margin-bottom: 10px;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin: 20px auto;
+        }
+
+        /* Style for the loading spinner */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Ensure it appears on top */
+        }
+
+        .spinner {
+            border: 8px solid #f3f3f3; /* Light grey background */
+            border-top: 8px solid #3498db; /* Blue spinner */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animation for the spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>AI SCRAPPING TOOL(Beta Testing)</h1>
+
+    <h2>PDF Summarization</h2>
+    <form id="pdfForm">
+        <label for="file">Upload a PDF:</label>
+        <input type="file" id="file" name="file" accept=".pdf" required>
+        <button type="submit">Summarize</button>
+    </form>
+
+    <div id="summary-container"></div>
+
+    <!-- Loading Spinner (Initially Hidden) -->
+    <div id="loading" style="display:none;">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        const pdfForm = document.getElementById("pdfForm");
+        const summaryContainer = document.getElementById("summary-container");
+
+        // Show loading spinner when sending request
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        // Hide loading spinner when request is complete
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Handle form submission
+        pdfForm.addEventListener("submit", async (event) => {
+            event.preventDefault(); // Prevent default form submission
+            summaryContainer.innerHTML = ""; // Clear any existing summary content
+            showLoading(); // Show loading spinner
+
+            const formData = new FormData(pdfForm); // Create FormData object from the form
+
+            try {
+                // Fetch the summary from the Flask endpoint
+                const response = await fetch("http://127.0.0.1:5000/summarizePdf", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to fetch summary. Please try again.");
+                }
+
+                const data = await response.json(); // Parse JSON response
+                displaySummary(data); // Display the summary
+            } catch (error) {
+                summaryContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
+            } finally {
+                hideLoading(); // Hide loading spinner
+            }
+        });
+
+        // Function to display the summary
+        function displaySummary(data) {
+            if (!data || !data.summary) {
+                summaryContainer.innerHTML = '<p class="error-message">No summary data available.</p>';
+                return;
+            }
+
+            // Create the summary box
+            const summaryBox = document.createElement("div");
+            summaryBox.classList.add("summary-box");
+
+            // Add a title
+            const title = document.createElement("h2");
+            title.textContent = "Summary";
+            summaryBox.appendChild(title);
+
+            // Format the summary text
+            const formattedSummary = data.summary
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Convert bold markers
+                .replace(/\n/g, "<br>") // Handle line breaks
+                .replace(/- (.*?)/g, "<li>$1</li>") // Convert bullet points
+                .replace(/(<li>.*?<\/li>)/g, "<ul>$1</ul>"); // Wrap list items in <ul>
+
+            // Add the formatted summary to the box
+            const content = document.createElement("div");
+            content.innerHTML = formattedSummary;
+            summaryBox.appendChild(content);
+
+            // Append the summary box to the container
+            summaryContainer.appendChild(summaryBox);
+        }
+    </script>
+</body>
+</html>
