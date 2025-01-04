@@ -25,9 +25,6 @@ def summarize_pdf():
 
     # Summarize text using Gemini LLM API
     summarized_text = summarize_text_with_llm(extracted_text)
-    if summarized_text.startswith("Error"):
-        return jsonify({"error": summarized_text}), 500
-
     return jsonify({"summary": summarized_text})
 
 @app.route('/scrape', methods=['POST'])

@@ -17,7 +17,6 @@ def extract_text_from_pdf(pdf_file):
 
 def summarize_text_with_llm(text):
     try:
-        # Prepare request payload
         data = {
             "contents": [
                 {
@@ -29,21 +28,19 @@ def summarize_text_with_llm(text):
                 }
             ]
         }
-
-        # Set headers
         headers = {
             "Content-Type": "application/json"
         }
-
-        # Send the request to the Gemini LLM API
         response = requests.post(API_URL, headers=headers, json=data)
-
+        
         if response.status_code == 200:
             result = response.json()
-            print(result)  # Log the response to understand its structure
-            return result 
-            # Extract the summarized text from the response
-            # return result.get("contents", [{}])[0].get("parts", [{}])[0].get("text", "No summary available.")
+            print(f"Parsed Response: {result}")  # Log the parsed response
+            
+            if result:
+                return result
+            else:
+                return "No summary available. (Response might not match expected structure)"
         else:
             return f"Error in LLM processing: {response.status_code} - {response.text}"
     except Exception as e:
