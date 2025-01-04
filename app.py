@@ -2,6 +2,9 @@ from flask import Flask, request, jsonify, render_template
 from backend.pdfScrap import extract_text_from_pdf, summarize_text_with_llm
 import requests
 from bs4 import BeautifulSoup
+from isstatic import *
+from static import *
+from dynamic import *
 
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
@@ -57,26 +60,24 @@ def scrape():
         # Fetch the website content
         response = requests.get(url)
         response.raise_for_status()  # Check for successful request (200 OK)
+
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Scrape specific data (title, meta description, and links)
-        title = soup.title.string if soup.title else "No Title Found"
-        description = soup.find('meta', attrs={'name': 'description'})
-        description = description['content'] if description else "No Description Found"
-        
-        # Extract all links from the page
-        links = [a['href'] for a in soup.find_all('a', href=True)]
+        flag = is_static_page(soup)
 
-        # Return the scraped data as JSON
-        return jsonify({
-            'title': title,
-            'description': description,
-            'links': links
-        })
+        if flag :
+            return scrape_static_page(soup)
+        
+        else :
+            return scrape_dynamic_website(url)
+
 
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Error fetching the website: {str(e)}'}), 500
     
+    except Exception as e:
+        return "Something Went Wrong", 400
+
 from backend import pdfScrap
 
 if __name__ == '__main__':
