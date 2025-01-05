@@ -1,21 +1,34 @@
-import json
+import json, time
 from playwright.sync_api import sync_playwright
 
 def check_infinite_scrolling(page):
     try:
-        # Check if infinite scrolling is implemented by detecting an element that triggers new content loading
-        scrollable_element = page.locator('body')
+        # Wait for the initial content to load
+        page.wait_for_load_state("networkidle")
+        # Capture the initial height and content of the page
+        initial_height = page.evaluate('document.documentElement.scrollHeight')
+        initial_content = page.content()
+        # Perform several scroll attempts and check if the content is still loading
+        max_scrolls = 5  # Max scroll attempts before assuming it's not endless
+        scroll_attempts = 0
+        while scroll_attempts < max_scrolls:
+            # Scroll to the bottom
+            page.evaluate('window.scrollTo(0, document.documentElement.scrollHeight)')
+            time.sleep(5)  # Wait for new content to load 
+            # Get the current height and current page content
+            new_height = page.evaluate('document.documentElement.scrollHeight')
+            new_content = page.content()
+            # Check if the height has increased and content has changed
+            if new_height > initial_height and new_content != initial_content:
+                # If new content is loaded (both height and content are different), update values
+                initial_height = new_height  # Update the height to the new value
+                initial_content = new_content  # Update the content to the newly loaded content
+                scroll_attempts += 1
+            else:
+                # No new content loaded, stop scrolling
+                return False  # No endless scrolling detected
 
-        # Try scrolling to the bottom
-        initial_scroll_height = page.evaluate('document.body.scrollHeight')
-        page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-        page.wait_for_timeout(2000)  # Wait for any new content to load
-        new_scroll_height = page.evaluate('document.body.scrollHeight')
-
-        # If the scroll height changes after scrolling, it indicates infinite scrolling is likely
-        if new_scroll_height > initial_scroll_height:
-            return True
-        return False
+        return True  # Endless scrolling detected
     
     except Exception as e:
         print(f"Error in check_infinite_scrolling: {str(e)}")
@@ -23,21 +36,47 @@ def check_infinite_scrolling(page):
 
 
 
-def check_single_page_app(page):
+def check_single_page_app(url):
     try:
-        # SPA can be detected if the page URL does not change upon navigating or loading new content
-        initial_url = page.url
-        page.evaluate('window.history.pushState(null, null, "/new-page")')  # Simulate URL change
-        page.wait_for_timeout(2000)  # Wait for content to load
-        new_url = page.url
+        # Start a Playwright session
+        with sync_playwright() as p:
+            # Launch browser and open a new page
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
 
-        # If the URL changes without reloading the page, it's a SPA
-        if new_url != initial_url:
-            return False  # URL changed, so it's not a SPA (traditional multi-page site)
-        return True  # URL stayed the same, indicating SPA
-    
+            # Track initial page load URL
+            initial_url = page.url
+
+            # Set a flag for page reload detection
+            page_reload_detected = False
+
+            # Function to handle frame navigation events
+            def on_navigation(event):
+                nonlocal page_reload_detected
+                # If the page URL changes and it's not the initial page URL, it's a full reload
+                if page.url != initial_url:
+                    page_reload_detected = True
+
+            # Listen for frame navigations, which is more suitable for SPA checks
+            page.on("framenavigated", on_navigation)
+
+            # Navigate to the URL
+            page.goto(url)
+
+            # Wait for the page to load initially
+            page.wait_for_load_state('load')  # Wait for the page to fully load (more reliable than time.sleep)
+
+            # Check if a full page reload happened
+            if page_reload_detected:
+                # Full page reload detected, this is NOT an SPA
+                browser.close()
+                return False
+            else:
+                # No full reload detected, possibly an SPA
+                browser.close()
+                return True
+            
     except Exception as e:
-        print(f"Error in check_infinite_scrolling: {str(e)}")
         return False
 
 
@@ -135,7 +174,8 @@ def scrape_dynamic_website(url):
         # Check if the page supports infinite scrolling
         data['infinite_scrolling'] = check_infinite_scrolling(page)
         # Check if the page is a Single Page Application (SPA)
-        data['single_page_app'] = check_single_page_app(page)
+        data['single_page_app'] = check_single_page_app(url)
         # Close the browser
         browser.close()
+        data['static'] = False
         return json.dumps(data, indent = 2)

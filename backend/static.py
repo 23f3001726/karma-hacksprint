@@ -65,7 +65,8 @@ def scrape_static_page(soup):
         'forms': forms,
         'images': images,
         'videos': videos,
-        'audio': audio
+        'audio': audio,
+        'static': true
     }
 
   except Exception as e:
@@ -81,7 +82,8 @@ def scrape_static_page(soup):
         'forms': None,
         'images': None,
         'videos': None,
-        'audio': None
+        'audio': None,
+        'static': true
     }
 
   return json.dumps(data, indent=2)

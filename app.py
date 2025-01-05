@@ -1,14 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 from backend.pdfScrap import extract_text_from_pdf, summarize_text_with_llm
-import requests
+import requests, os
 from bs4 import BeautifulSoup
-from isstatic import *
-from static import *
-from dynamic import *
-
-from flask import Flask, request, jsonify
+from backend.isstatic import *
+from backend.static import *
+from backend.dynamic import *
 from werkzeug.utils import secure_filename
-import os
 
 app = Flask(__name__)
 UPLOAD_FOLDER = './uploads'
@@ -49,6 +46,7 @@ def summarize_pdf():
     return jsonify({"summary": summarized_text})
 
 
+
 @app.route('/scrape', methods=['POST'])
 def scrape():
     url = request.json.get('url')  # Extract the URL from the POST data
@@ -63,7 +61,7 @@ def scrape():
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        flag = is_static_page(soup)
+        flag = is_static_page(soup, len(response.content) < 10000)
 
         if flag :
             return scrape_static_page(soup)
@@ -76,7 +74,8 @@ def scrape():
         return jsonify({'error': f'Error fetching the website: {str(e)}'}), 500
     
     except Exception as e:
-        return "Something Went Wrong", 400
+        print(str(e))
+        return jsonify({'error': f'Error fetching the website: {str(e)}'}), 400
 
 from backend import pdfScrap
 
