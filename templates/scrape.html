@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrape Website</title>
+  <style>
+    /* General Styling */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f7fb;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #007bff;
+      font-size: 2.5em;
+      margin-top: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    input {
+      background-color: #f8f9fa;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Output Section Styling */
+    #jsonOutput {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .json-section {
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .json-section strong {
+      color: #333;
+    }
+
+    /* Dropdown Styling */
+    .dropdown {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+
+    .dropdown-btn {
+      padding: 10px;
+      background-color: #28a745;
+      color: white;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .dropdown-btn:hover {
+      background-color: #218838;
+    }
+
+    .dropdown-content {
+      display: none;
+      margin-top: 10px;
+      padding-left: 20px;
+    }
+
+    .nested {
+      padding: 5px 0;
+      font-size: 14px;
+      background-color: #e9ecef;
+      border-radius: 5px;
+      margin: 5px 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    /* Transitions */
+    .dropdown-content {
+      transition: all 0.3s ease-in-out;
+    }
+
+    .dropdown-content.hidden {
+      display: none;
+      opacity: 0;
+    }
+
+    .dropdown-content:not(.hidden) {
+      display: block;
+      opacity: 1;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Scrape Website</h1>
+    <input type="text" id="urlInput" placeholder="Enter URL to scrape">
+    <button onclick="scrapeWebsite()">Scrape</button>
+    
+    <div id="jsonOutput"></div>
+  </div>
+
+  <script>
+    // Function to handle the scraping request
+    async function scrapeWebsite() {
+      const url = document.getElementById('urlInput').value;
+
+      if (!url) {
+        alert("Please enter a URL");
+        return;
+      }
+
+      try {
+        const response = await fetch('/scrape', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const jsonData = await response.json();
+        
+        if (jsonData.static === undefined) {
+          throw new Error('Invalid response: No static flag');
+        }
+
+        if (jsonData.static) {
+          displayStaticPage(jsonData);
+        } else {
+          displayDynamicPage(jsonData);
+        }
+
+      } catch (error) {
+        document.getElementById('jsonOutput').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+
+    // Function to display static page JSON
+    function displayStaticPage(data) {
+      let outputHtml = '<h3>Static Page Data</h3>';
+      outputHtml += formatJsonData(data);
+      document.getElementById('jsonOutput').innerHTML = outputHtml;
+    }
+
+    // Function to display dynamic page JSON
+    function displayDynamicPage(data) {
+      let outputHtml = '<h3>Dynamic Page Data</h3>';
+      outputHtml += formatJsonData(data);
+      document.getElementById('jsonOutput').innerHTML = outputHtml;
+    }
+
+    // Function to format JSON data into HTML (with dropdowns for nested data)
+    function formatJsonData(data) {
+      let html = '';
+
+      for (let key in data) {
+        if (data[key] !== null && data[key] !== "None") {
+          html += createDropdown(key, data[key]);
+        }
+      }
+
+      return html;
+    }
+
+    // Function to create dropdown for each JSON key-value pair
+    function createDropdown(key, value) {
+      let html = `<div class="json-section">`;
+      html += `<strong>${formatTitle(key)}</strong>`;
+
+      if (typeof value === 'boolean') {
+        html += `<span>: ${value ? 'Yes' : 'No'}</span>`;
+      } else if (Array.isArray(value)) {
+        html += renderArray(value);
+      } else if (typeof value === 'object') {
+        html += renderObject(value);
+      } else {
+        html += `<span>: ${formatValue(value)}</span>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    // Function to format the title (key) to be more human-friendly
+    function formatTitle(title) {
+      // Replace underscores or camelCase with spaces and capitalize first letters
+      return title.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    }
+
+    // Function to format values for better readability
+    function formatValue(value) {
+      if (typeof value === 'string' && value.length > 100) {
+        return `${value.substring(0, 100)}...`; // Truncate long strings
+      }
+      return value;
+    }
+
+    // Function to render array values with dropdowns if necessary
+    function renderArray(arr) {
+      let html = `<div class="dropdown">`;
+      html += `<button class="dropdown-btn">Show List (${arr.length} items)</button>`;
+      html += `<div class="dropdown-content hidden">`;
+      arr.forEach(item => {
+        html += `<div class="nested">${JSON.stringify(item)}</div>`;
+      });
+      html += `</div>`;
+      html += `</div>`;
+      return html;
+    }
+
+    // Function to render nested object values with dropdowns
+    function renderObject(obj) {
+      let html = `<div class="dropdown">`;
+      html += `<button class="dropdown-btn">Show Object</button>`;
+      html += `<div class="dropdown-content hidden">`;
+      for (let key in obj) {
+        if (obj[key] !== null && obj[key] !== "None") {
+          html += createDropdown(key, obj[key]);
+        }
+      }
+      html += `</div>`;
+      html += `</div>`;
+      return html;
+    }
+
+    // Add event listener for dropdown buttons
+    document.addEventListener('click', function (e) {
+      if (e.target && e.target.matches('.dropdown-btn')) {
+        const content = e.target.nextElementSibling;
+        if (content.classList.contains('hidden')) {
+          content.classList.remove('hidden');
+        } else {
+          content.classList.add('hidden');
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
