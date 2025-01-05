@@ -3,231 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>hacksprint</title>
-    <style>
-        /* Same style as before */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f9f9f9;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #333;
-        }
-        form {
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 10px;
-        }
-        input, button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .summary-box {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            margin: 20px auto;
-        }
-        .summary-box h2 {
-            margin-top: 0;
-            color: #333;
-        }
-        .summary-box p, .summary-box ul {
-            margin: 10px 0;
-            line-height: 1.6;
-        }
-        .summary-box ul {
-            padding-left: 20px;
-        }
-        .summary-box ul li {
-            margin-bottom: 10px;
-        }
-        .error-message {
-            color: red;
-            text-align: center;
-            margin: 20px auto;
-        }
-        /* Loading Spinner Style */
-        #loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .spinner {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <title>AI Scraping Tool</title>
+    <link rel="stylesheet" href="/static/pdfscrap.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+    rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
+    crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" 
+    crossorigin="anonymous"></script>
+    <script src="/static/pdfscrap.js" defer></script>
+    <script src="/static/urlscrap.js" defer></script>
 </head>
 <body>
-    <h1>AI SCRAPPING TOOL (Beta Testing)</h1>
+    <header>
+        <h1>AI Scraping Tool</h1>
+    </header>
 
-    <h2>PDF Summarization</h2>
-    <form id="pdfForm">
-        <label for="file">Upload a PDF:</label>
-        <input type="file" id="file" name="file" accept=".pdf" required>
-        <button type="submit">Summarize PDF</button>
-    </form>
+    <main>
+        <section>
+            <h2>PDF Summarization</h2>
+            <form id="pdfForm">
+                <label for="file">Upload a PDF:</label>
+                <input type="file" id="file" name="file" accept=".pdf" required>
+                <button type="submit" class="btn btn-outline-dark">Summarize PDF</button>
+            </form>
+        </section>
 
-    <h2>URL Scraping</h2>
-    <form id="urlForm">
-        <label for="url">Enter URL:</label>
-        <input type="url" id="url" name="url" required placeholder="https://example.com">
-        <button type="submit">Scrape URL</button>
-    </form>
+        <section>
+            <h2>Web Scraping</h2>
+            <form id="urlForm">
+                <label for="url">Enter URL:</label>
+                <input type="url" id="url" name="url" required placeholder="https://example.com">
+                <button type="submit" class="btn btn-outline-dark">Scrap URL</button>
 
-    <div id="summary-container"></div>
-    <div id="url-container"></div>
+            </form>
+        </section>
 
-    <div id="loading" style="display:none;">
-        <div class="spinner"></div>
-    </div>
+        <div id="summary-container"></div>
+        <div id="url-container"></div>
 
-    <script>
-        const pdfForm = document.getElementById("pdfForm");
-        const urlForm = document.getElementById("urlForm");
-        const summaryContainer = document.getElementById("summary-container");
-        const urlContainer = document.getElementById("url-container");
-
-        // Show loading spinner
-        function showLoading() {
-            document.getElementById('loading').style.display = 'flex';
-        }
-
-        // Hide loading spinner
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        // Handle PDF form submission
-        pdfForm.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            summaryContainer.innerHTML = "";
-            showLoading();
-
-            const formData = new FormData(pdfForm);
-
-            try {
-                const response = await fetch("http://127.0.0.1:5000/summarizePdf", {
-                    method: "POST",
-                    body: formData,
-                });
-
-                if (!response.ok) throw new Error("Failed to fetch summary.");
-                const data = await response.json();
-                displaySummary(data);
-            } catch (error) {
-                summaryContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // Handle URL form submission
-        urlForm.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            urlContainer.innerHTML = "";
-            showLoading();
-
-            const urlData = { url: document.getElementById('url').value };
-
-            try {
-                const response = await fetch("http://127.0.0.1:5000/scrape", {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(urlData),
-                });
-
-                if (!response.ok) throw new Error("Failed to scrape URL.");
-                const data = await response.json();
-                displayUrlData(data);
-            } catch (error) {
-                urlContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // Display PDF summary
-        function displaySummary(data) {
-            if (!data || !data.summary) {
-                summaryContainer.innerHTML = '<p class="error-message">No summary data available.</p>';
-                return;
-            }
-
-            const summaryBox = document.createElement("div");
-            summaryBox.classList.add("summary-box");
-            const title = document.createElement("h2");
-            title.textContent = "Summary";
-            summaryBox.appendChild(title);
-            const content = document.createElement("div");
-            content.innerHTML = formatSummaryText(data.summary);
-            summaryBox.appendChild(content);
-            summaryContainer.appendChild(summaryBox);
-        }
-
-        // Display URL data
-        function displayUrlData(data) {
-            const urlBox = document.createElement("div");
-            urlBox.classList.add("summary-box");
-            const title = document.createElement("h2");
-            title.textContent = "Scraped Content";
-            urlBox.appendChild(title);
-            const content = document.createElement("div");
-            content.innerHTML = data.content || "<p>No content found.</p>";
-            urlBox.appendChild(content);
-            urlContainer.appendChild(urlBox);
-        }
-
-        // Format summary text for HTML
-        function formatSummaryText(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                        .replace(/\n/g, "<br>")
-                        .replace(/- (.*?)/g, "<li>$1</li>")
-                        .replace(/(<li>.*?<\/li>)/g, "<ul>$1</ul>");
-        }
-    </script>
+        <div id="loading" style="display:none;" aria-busy="true" aria-live="polite">
+            <div class="spinner"></div>
+            <p class="loading-text">Summarizing...</p>
+        </div>
+    </main>
 </body>
 </html>
