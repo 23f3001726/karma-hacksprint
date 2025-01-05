@@ -14,7 +14,7 @@ def check_infinite_scrolling(page):
         while scroll_attempts < max_scrolls:
             # Scroll to the bottom
             page.evaluate('window.scrollTo(0, document.documentElement.scrollHeight)')
-            time.sleep(5)  # Wait for new content to load 
+            time.sleep(3)  # Wait for new content to load 
             # Get the current height and current page content
             new_height = page.evaluate('document.documentElement.scrollHeight')
             new_content = page.content()
