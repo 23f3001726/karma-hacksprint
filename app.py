@@ -46,6 +46,10 @@ def summarize_pdf():
     return jsonify({"summary": summarized_text})
 
 
+@app.route('/scrape', methods=['GET'])
+def get_scrape():
+    return render_template('scrape.html')
+
 
 @app.route('/scrape', methods=['POST'])
 def scrape():
@@ -71,6 +75,7 @@ def scrape():
 
 
     except requests.exceptions.RequestException as e:
+        print(str(e))
         return jsonify({'error': f'Error fetching the website: {str(e)}'}), 500
     
     except Exception as e:
