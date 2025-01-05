@@ -55,7 +55,7 @@ def scrape_static_page(soup):
 
     # Create JSON object
     data = {
-        'page_title': page_title,
+        'title': page_title,
         'headings': headings,
         'links': links,
         'ordered_lists': ordered_lists,
@@ -72,7 +72,7 @@ def scrape_static_page(soup):
   except Exception as e:
     print(f"Error fetching URL: {e}")
     data = {
-        'page_title': None,
+        'title': None,
         'headings': None,
         'links': None,
         'ordered_lists': None,
