@@ -177,5 +177,5 @@ def scrape_dynamic_website(url):
         data['single_page_app'] = check_single_page_app(url)
         # Close the browser
         browser.close()
-        data['static'] = True
+        data['static'] = False
         return json.dumps(data, indent = 2)
